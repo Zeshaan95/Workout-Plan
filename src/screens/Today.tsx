@@ -11,7 +11,7 @@ import { formatStLb } from '../lib/units';
 import { nextMilestone, sevenDayAverage, targetFor, weeklyStatus } from '../lib/weight';
 import { strengthWarnings } from '../lib/workouts';
 
-function QuickWeigh({ date }: { date: string }) {
+function QuickWeigh({ date, latest }: { date: string; latest: number | null }) {
   const [kg, setKg] = useState<number | null>(null);
   const [saved, setSaved] = useState<number | null>(null);
   const todays = useLiveQuery(() => db.weighIns.where('date').equals(date).toArray(), [date]);
@@ -35,7 +35,7 @@ function QuickWeigh({ date }: { date: string }) {
       >
         <label className="flex-1">
           <span className="label">Weigh-in</span>
-          <NumInput value={kg} onChange={setKg} placeholder={first ? first.kg.toFixed(2) : '96.50'} ariaLabel="Weight in kg" suffix="kg" className="[&_input]:h-14 [&_input]:text-2xl [&_input]:font-semibold" />
+          <NumInput value={kg} onChange={setKg} placeholder={(first?.kg ?? latest)?.toFixed(2) ?? ''} ariaLabel="Weight in kg" suffix="kg" className="[&_input]:h-14 [&_input]:text-2xl [&_input]:font-semibold" />
         </label>
         <button className="btn-primary h-14 w-24" disabled={kg == null}>
           Save
@@ -92,7 +92,7 @@ export default function Today({ dateOverride }: { dateOverride?: string | null }
       }
       right={dateOverride ? <a className="btn-secondary min-h-[36px] text-sm" href="#/today">Real today</a> : undefined}
     >
-      <QuickWeigh date={today} />
+      <QuickWeigh date={today} latest={latest} />
 
       {warnings.length > 0 && (
         <Card className="bg-amber-50 ring-amber-200 dark:bg-amber-950/40 dark:ring-amber-900">

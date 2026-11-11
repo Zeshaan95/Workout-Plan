@@ -54,3 +54,6 @@ A personal, mobile-first, offline PWA for a 12-week fat-loss plan. You use it on
 - **Routing:** hash-based (`src/router.ts`), so static hosting needs no rewrites. `?date=YYYY-MM-DD` on `#/today` previews any day.
 - **Language and UI:** British English. Mobile-first at 390 × 844, with 48 px+ tap targets. Use `inputMode="decimal"` / `"numeric"` via `NumInput`.
 - **Commands:** `npm test` (Vitest), `npm run build` (tsc + Vite + service worker), `npm run dev`.
+- **Deploy:** `netlify.toml` and `vercel.json` publish `dist/`, with `sw.js`/`index.html` set to no-cache. See README for the deploy and iPhone install steps.
+- **Icons:** to regenerate the PWA PNGs from `public/icon.svg`, run `node scripts/icons.cjs` (uses the pre-installed Playwright).
+- **Logger pattern:** writes are serialised through a promise queue so a new log's `add` completes before later `put`s. A stale log from a previous date or session is never rendered.

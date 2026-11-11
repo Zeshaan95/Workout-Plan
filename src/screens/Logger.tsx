@@ -168,7 +168,9 @@ export default function Logger({ date: dateParam, session: sessionParam }: { dat
   const allLogs = useWorkouts();
   const history = useMemo(() => allLogs.filter((l) => l.date < date), [allLogs, date]);
 
-  const [log, setLog] = useState<WorkoutLog | null>(null);
+  const [logState, setLog] = useState<WorkoutLog | null>(null);
+  // Ignore a stale log from the previous date/session during the render before the load effect runs.
+  const log = logState && logState.date === date && logState.session === session ? logState : null;
   const [timer, setTimer] = useState<TimerState | null>(null);
   const idRef = useRef<number | undefined>(undefined);
 

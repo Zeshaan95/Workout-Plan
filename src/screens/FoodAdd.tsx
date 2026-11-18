@@ -17,10 +17,14 @@ import {
   ZERO,
   type DiaryEntry,
   type Food,
+  recipeToFood,
   type MealId,
   type Nutrients,
+  type RecipeItem,
   type Serving,
 } from '../lib/food';
+
+import { COFID_ATTRIBUTION, cofidToFood, loadCofid, searchCofid, type CofidRow } from '../lib/cofid';
 
 const BarcodeScanner = lazy(() => import('../components/BarcodeScanner'));
 
@@ -42,7 +46,7 @@ function FoodRow({ title, sub, kcal, onClick }: { title: string; sub?: string; k
     <li>
       <button className="flex w-full items-center gap-3 px-4 py-2.5 text-left active:bg-slate-50 dark:active:bg-slate-800/50" onClick={onClick}>
         <span className="min-w-0 flex-1">
-          <span className="block truncate font-medium">{title}</span>
+          <span className="line-clamp-2 block font-medium leading-snug">{title}</span>
           {sub && <span className="muted block truncate text-xs">{sub}</span>}
         </span>
         {kcal != null && <span className="font-semibold tabular-nums">{kcal}</span>}
@@ -52,7 +56,7 @@ function FoodRow({ title, sub, kcal, onClick }: { title: string; sub?: string; k
   );
 }
 
-export default function FoodAdd({ date: dateParam, meal: mealParam }: { date?: string | null; meal?: string | null }) {
+export default function FoodAdd({ date: dateParam, meal: mealParam, recipe: recipeParam }: { date?: string | null; meal?: string | null; recipe?: string | null }) {
   const today = useToday();
   const date = dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : today;
   const meal = (PLAN.diary.meals.some((m) => m.id === mealParam) ? mealParam : 'snacks') as MealId;
@@ -73,11 +77,22 @@ export default function FoodAdd({ date: dateParam, meal: mealParam }: { date?: s
   const [scan, setScan] = useState(false);
   const [scanMsg, setScanMsg] = useState('');
   const [added, setAdded] = useState<string | null>(null);
+  const [cofid, setCofid] = useState<CofidRow[]>([]);
+  useEffect(() => {
+    loadCofid().then(setCofid);
+  }, []);
+
+  // Recipe mode: chosen foods become ingredients of this recipe instead of diary entries.
+  const recipeId = recipeParam ? Number(recipeParam) : null;
+  const recipeFood = foods.find((f) => f.id === recipeId);
+  const recipeBack = `/food/recipe?id=${recipeId}&date=${date}&meal=${meal}`;
 
   const recent = useMemo(() => recentFoods(allEntries.filter((e) => e.foodId != null || e.serving.label !== 'entry'), 30), [allEntries]);
   const frequent = useMemo(() => frequentFoods(allEntries.filter((e) => e.serving.label !== 'entry'), 30), [allEntries]);
   const myFoods = useMemo(() => [...foods].filter((f) => f.source !== 'quick').sort((a, b) => a.name.localeCompare(b.name)), [foods]);
-  const localMatches = q.trim() ? myFoods.filter((f) => matchesQuery(f.name, f.brand, q)) : [];
+  const localMatches = q.trim() ? myFoods.filter((f) => f.id !== recipeId && matchesQuery(f.name, f.brand, q)) : [];
+  const cofidExact = useMemo(() => (q.trim().length >= 2 ? searchCofid(cofid, q) : []), [cofid, q]);
+  const cofidMatches = useMemo(() => (cofidExact.length || q.trim().length < 2 ? cofidExact : searchCofid(cofid, q, 30, true)), [cofid, q, cofidExact]);
 
   // Online search, debounced.
   useEffect(() => {
@@ -106,8 +121,17 @@ export default function FoodAdd({ date: dateParam, meal: mealParam }: { date?: s
     };
   }, [q, online]);
 
+  const addToRecipe = async (items: RecipeItem[]) => {
+    const r = await db.foods.get(recipeId!);
+    if (!r?.recipe) return;
+    const recipe = { ...r.recipe, items: [...r.recipe.items, ...items] };
+    await db.foods.put(recipeToFood(r.name, recipe, r));
+    window.location.hash = recipeBack;
+  };
+
   const addEntry = async (food: Food, serving: Serving, qty: number, m: MealId) => {
     const saved = food.source === 'quick' ? food : await ensureFood(food);
+    if (recipeId != null) return addToRecipe([{ foodId: saved.id ?? null, name: saved.name, brand: saved.brand, serving, qty }]);
     await db.diary.add(makeEntry(saved, serving, qty, date, m));
     await syncHabitsFromDiary(db, date);
     setPicked(null);
@@ -121,6 +145,7 @@ export default function FoodAdd({ date: dateParam, meal: mealParam }: { date?: s
   };
 
   const addMeal = async (items: DiaryEntry[] | Omit<DiaryEntry, 'id' | 'date' | 'meal' | 'createdAt'>[]) => {
+    if (recipeId != null) return addToRecipe(items.map((i) => ({ foodId: i.foodId, name: i.name, brand: i.brand, serving: i.serving, qty: i.qty })));
     const now = new Date().toISOString();
     await db.diary.bulkAdd(items.map((i) => ({ ...i, id: undefined, date, meal, createdAt: now })) as DiaryEntry[]);
     await syncHabitsFromDiary(db, date);
@@ -156,13 +181,22 @@ export default function FoodAdd({ date: dateParam, meal: mealParam }: { date?: s
   };
 
   return (
-    <Page title={`Add to ${mealLabel}`} subtitle={date === today ? 'Today' : date} back={`#/food?date=${date}`}>
-      <input className="input" type="search" placeholder={online ? 'Search foods (your foods + Open Food Facts)' : 'Search your foods'} value={q} onChange={(e) => setQ(e.target.value)} enterKeyHint="search" />
+    <Page
+      title={recipeId != null ? 'Add ingredient' : `Add to ${mealLabel}`}
+      subtitle={recipeId != null ? recipeFood?.name : date === today ? 'Today' : date}
+      back={recipeId != null ? `#${recipeBack}` : `#/food?date=${date}`}
+    >
+      <input className="input" type="search" placeholder={online ? 'Search foods, UK foods and Open Food Facts' : 'Search your foods and UK foods'} value={q} onChange={(e) => setQ(e.target.value)} enterKeyHint="search" />
 
-      <div className="grid grid-cols-3 gap-2">
-        <button className="btn-secondary px-2 text-sm" onClick={() => setScan(true)}>▦ Scan</button>
+      <div className="grid grid-cols-2 gap-2">
+        <button className="btn-secondary px-2 text-sm" onClick={() => setScan(true)}>▦ Scan barcode</button>
         <button className="btn-secondary px-2 text-sm" onClick={() => setQuick(true)}>Quick add</button>
-        <a className="btn-secondary px-2 text-sm" href={`#/food/new?date=${date}&meal=${meal}`}>Create food</a>
+        {recipeId == null && (
+          <>
+            <a className="btn-secondary px-2 text-sm" href={`#/food/new?date=${date}&meal=${meal}`}>Create food</a>
+            <a className="btn-secondary px-2 text-sm" href={`#/food/recipe?date=${date}&meal=${meal}`}>New recipe</a>
+          </>
+        )}
       </div>
       {scanMsg && <p className="text-sm text-amber-700 dark:text-amber-400">{scanMsg}</p>}
       {added && <div className="fixed inset-x-0 top-4 z-50 mx-auto w-max rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-lg">{added} ✓</div>}
@@ -178,9 +212,21 @@ export default function FoodAdd({ date: dateParam, meal: mealParam }: { date?: s
               ))}
             </ul>
           </Card>
+          <Card className="p-0">
+            <div className="muted px-4 pt-3 text-xs font-semibold uppercase">UK foods (CoFID) · works offline</div>
+            <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+              {q.trim().length < 2 && <li className="muted px-4 py-3 text-sm">Type at least 2 letters.</li>}
+              {q.trim().length >= 2 && cofidMatches.length === 0 && <li className="muted px-4 py-3 text-sm">No UK foods match. Try fewer words, e.g. "chicken breast".</li>}
+              {cofidExact.length === 0 && cofidMatches.length > 0 && <li className="muted px-4 py-2 text-xs">No exact match. Closest UK foods:</li>}
+              {cofidMatches.map((r) => {
+                const f = cofidToFood(r);
+                return <FoodRow key={r[0]} title={r[1]} sub={`Per ${f.servings[0].label} · ${r[4]} g protein`} kcal={r[3]} onClick={() => setPicked({ food: f })} />;
+              })}
+            </ul>
+          </Card>
           {online && (
             <Card className="p-0">
-              <div className="muted px-4 pt-3 text-xs font-semibold uppercase">{PLAN.diary.onlineSource.name}</div>
+              <div className="muted px-4 pt-3 text-xs font-semibold uppercase">{PLAN.diary.onlineSource.name} · branded and packaged</div>
               <ul className="divide-y divide-slate-100 dark:divide-slate-800">
                 {q.trim().length < 3 && <li className="muted px-4 py-3 text-sm">Type at least 3 letters.</li>}
                 {searching && <li className="muted px-4 py-3 text-sm">Searching…</li>}
@@ -220,13 +266,20 @@ export default function FoodAdd({ date: dateParam, meal: mealParam }: { date?: s
                   myFoods.map((f) => (
                     <li key={f.id} className="flex items-center">
                       <ul className="min-w-0 flex-1">
-                        <FoodRow title={f.name} sub={`${f.brand ? `${f.brand} · ` : ''}${f.servings[0]?.label}${f.source === 'off' ? ' · from Open Food Facts' : ''}`} kcal={f.servings[0]?.kcal} onClick={() => setPicked({ food: f })} />
+                        <FoodRow
+                          title={f.name}
+                          sub={`${f.source === 'recipe' ? 'Recipe · ' : ''}${f.brand ? `${f.brand} · ` : ''}${f.servings[0]?.label}${f.source === 'off' ? ' · Open Food Facts' : f.source === 'cofid' ? ' · UK foods' : ''}`}
+                          kcal={f.servings[0]?.kcal}
+                          onClick={() => setPicked({ food: f })}
+                        />
                       </ul>
-                      <a className="muted px-3 py-3 text-sm" href={`#/food/new?id=${f.id}&date=${date}&meal=${meal}`}>Edit</a>
+                      <a className="muted px-3 py-3 text-sm" href={f.source === 'recipe' ? `#/food/recipe?id=${f.id}&date=${date}&meal=${meal}` : `#/food/new?id=${f.id}&date=${date}&meal=${meal}`}>
+                        Edit
+                      </a>
                     </li>
                   ))
                 ) : (
-                  <li className="muted px-4 py-3 text-sm">Create foods, or add from search, and they are saved here for offline use.</li>
+                  <li className="muted px-4 py-3 text-sm">Foods and recipes you create or use are saved here for offline use.</li>
                 ))}
               {tab === 'meals' &&
                 (meals.length ? (
@@ -251,7 +304,8 @@ export default function FoodAdd({ date: dateParam, meal: mealParam }: { date?: s
         </>
       )}
 
-      <a href={`#/food?date=${date}`} className="btn-primary w-full">Done</a>
+      <a href={recipeId != null ? `#${recipeBack}` : `#/food?date=${date}`} className="btn-primary w-full">Done</a>
+      <p className="muted text-center text-[11px]">{COFID_ATTRIBUTION}</p>
 
       {picked && (
         <ServingSheet
@@ -259,6 +313,8 @@ export default function FoodAdd({ date: dateParam, meal: mealParam }: { date?: s
           initialServing={picked.serving}
           initialQty={picked.qty}
           initialMeal={meal}
+          hideMeal={recipeId != null}
+          confirmLabel={recipeId != null ? 'Add to recipe' : 'Add'}
           onClose={() => setPicked(null)}
           onConfirm={(s, qty, m) => addEntry(picked.food, s, qty, m)}
         />

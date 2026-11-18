@@ -46,6 +46,7 @@ export default function ServingSheet({
   onConfirm,
   onClose,
   onDelete,
+  hideMeal,
 }: {
   food: Food;
   initialServing?: Serving;
@@ -55,17 +56,21 @@ export default function ServingSheet({
   onConfirm: (serving: Serving, qty: number, meal: MealId) => void;
   onClose: () => void;
   onDelete?: () => void;
+  hideMeal?: boolean;
 }) {
   const servings = food.servings;
   const startIdx = initialServing ? Math.max(0, servings.findIndex((s) => s.label === initialServing.label)) : 0;
   const isCustomGrams = !!initialServing && !servings.some((s) => s.label === initialServing.label) && initialServing.grams != null;
-  const [idx, setIdx] = useState<number | 'grams'>(isCustomGrams ? 'grams' : startIdx);
+  // UK (CoFID) foods are per 100 g, so start in grams unless an earlier entry says otherwise.
+  const startInGrams = isCustomGrams || (!initialServing && food.source === 'cofid' && !!food.per100g);
+  const unit = food.unit ?? 'g';
+  const [idx, setIdx] = useState<number | 'grams'>(startInGrams ? 'grams' : startIdx);
   const [qty, setQty] = useState<number | null>(isCustomGrams ? 1 : initialQty);
   const [grams, setGrams] = useState<number | null>(isCustomGrams ? initialServing!.grams! : 100);
   const [meal, setMeal] = useState<MealId>(initialMeal);
 
   const serving: Serving | null =
-    idx === 'grams' ? (food.per100g && grams ? gramsServing(food.per100g, grams) : null) : (servings[idx] ?? initialServing ?? null);
+    idx === 'grams' ? (food.per100g && grams ? gramsServing(food.per100g, grams, unit) : null) : (servings[idx] ?? initialServing ?? null);
   const q = idx === 'grams' ? 1 : qty ?? 0;
   const preview = serving ? scale(serving, q) : null;
 
@@ -83,7 +88,7 @@ export default function ServingSheet({
         ))}
         {food.per100g && (
           <button onClick={() => setIdx('grams')} className={`rounded-full px-3 py-2 text-sm font-semibold ${idx === 'grams' ? 'bg-emerald-600 text-white dark:bg-emerald-500 dark:text-slate-950' : 'bg-slate-100 dark:bg-slate-800'}`}>
-            Grams
+            {unit === 'ml' ? 'Millilitres' : 'Grams'}
           </button>
         )}
       </div>
@@ -91,7 +96,7 @@ export default function ServingSheet({
         {idx === 'grams' ? (
           <label>
             <span className="label">Amount</span>
-            <NumInput value={grams} onChange={setGrams} suffix="g" ariaLabel="Grams" autoFocus />
+            <NumInput value={grams} onChange={setGrams} suffix={unit} ariaLabel="Grams" autoFocus />
           </label>
         ) : (
           <label>
@@ -99,7 +104,7 @@ export default function ServingSheet({
             <NumInput value={qty} onChange={setQty} suffix="×" ariaLabel="Number of servings" />
           </label>
         )}
-        <label>
+        <label className={hideMeal ? 'hidden' : ''}>
           <span className="label">Meal</span>
           <select className="input text-base" value={meal} onChange={(e) => setMeal(e.target.value as MealId)}>
             {PLAN.diary.meals.map((m) => (

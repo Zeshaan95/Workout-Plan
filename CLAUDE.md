@@ -44,6 +44,8 @@ A personal, mobile-first, offline PWA for a 12-week fat-loss plan. You use it on
   - Online search and barcode lookup use Open Food Facts (toggle in Settings). Any food used is saved to the `foods` table for offline use.
   - Barcode scanning uses the native BarcodeDetector where available, otherwise ZXing (lazy-loaded; iPhone Safari needs this).
   - Diary totals write the day's kcal and protein habits (`syncHabitsFromDiary`, `fromDiary` flag).
+  - UK generic foods come from CoFID 2021 (McCance and Widdowson, Open Government Licence v3.0), bundled offline as `src/data/cofid.json` and lazy-loaded (`src/lib/cofid.ts`). Regenerate it with `python3 scripts/build-cofid.py <CoFID xlsx>`. Keep the attribution (`COFID_ATTRIBUTION`) visible in the app.
+  - Recipes are foods with `source: 'recipe'` and a `recipe` (ingredients, portions, optional cooked weight). They log by portion, or by grams when the cooked weight is known. Ingredients are added through the normal food search (`#/food/add?recipe=<id>`).
 - **Interpretations** (where the brief was open):
   - "Lifts going down" (rule 3): the latest session is lower than the previous one on any compound lift or on pull-ups.
   - Dips and push-ups: "tested max" is a manually recorded max on the exercise card.

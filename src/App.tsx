@@ -8,6 +8,7 @@ import FoodDiary from './screens/Food';
 import FoodAdd from './screens/FoodAdd';
 import FoodAudit from './screens/FoodAudit';
 import FoodEdit from './screens/FoodEdit';
+import RecipeEdit from './screens/RecipeEdit';
 import Habits from './screens/Habits';
 import Logger from './screens/Logger';
 import More from './screens/More';
@@ -75,10 +76,13 @@ export default function App() {
       screen = <FoodDiary date={dateOverride} />;
       break;
     case '/food/add':
-      screen = <FoodAdd date={dateOverride} meal={route.params.get('meal')} />;
+      screen = <FoodAdd date={dateOverride} meal={route.params.get('meal')} recipe={route.params.get('recipe')} />;
       break;
     case '/food/new':
       screen = <FoodEdit id={route.params.get('id')} date={dateOverride} meal={route.params.get('meal')} barcode={route.params.get('barcode')} />;
+      break;
+    case '/food/recipe':
+      screen = <RecipeEdit id={route.params.get('id')} date={dateOverride} meal={route.params.get('meal')} />;
       break;
     case '/log':
       screen = <Logger date={dateOverride} session={route.params.get('session')} />;

@@ -62,3 +62,8 @@ To move to a new device:
 1. On the old device, export the JSON backup.
 2. Open the app on the new device.
 3. Go to **Settings → Import backup** and choose the file. Import replaces everything with the backup's contents.
+
+## Food data
+
+- **UK foods (offline):** McCance and Widdowson's Composition of Foods Integrated Dataset 2021 (Public Health England). Contains public sector information licensed under the [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/). To regenerate it, run `python3 scripts/build-cofid.py <xlsx>`.
+- **Branded and packaged foods (online):** [Open Food Facts](https://world.openfoodfacts.org), under the Open Database Licence. This can be turned off in Settings.

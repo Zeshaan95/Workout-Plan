@@ -26,7 +26,13 @@ export interface Food {
   name: string;
   brand?: string;
   barcode?: string;
-  source: 'custom' | 'off' | 'quick';
+  source: 'custom' | 'off' | 'quick' | 'cofid' | 'recipe';
+  /** CoFID food code, for foods from the UK composition tables. */
+  cofidCode?: string;
+  /** "ml" for drinks (CoFID values are per 100 ml), otherwise grams. */
+  unit?: 'g' | 'ml';
+  /** Set for recipes: ingredients and how many portions they make. */
+  recipe?: Recipe;
   /** Nutrients per 100 g, when known (lets you log any number of grams). */
   per100g?: Nutrients | null;
   servings: Serving[];
@@ -44,6 +50,21 @@ export interface DiaryEntry extends Nutrients {
   serving: Serving;
   qty: number;
   createdAt?: string;
+}
+
+export interface RecipeItem {
+  foodId?: number | null;
+  name: string;
+  brand?: string;
+  serving: Serving;
+  qty: number;
+}
+
+export interface Recipe {
+  portions: number;
+  /** Total cooked weight, if weighed: lets you log the recipe by grams. */
+  cookedWeightG?: number | null;
+  items: RecipeItem[];
 }
 
 export interface SavedMeal {
@@ -82,8 +103,8 @@ export function totals(entries: Nutrients[]): Nutrients {
 }
 
 /** A serving for an arbitrary number of grams, from per-100 g values. */
-export function gramsServing(per100g: Nutrients, grams: number): Serving {
-  return { label: `${grams} g`, grams, ...scale(per100g, grams / 100) };
+export function gramsServing(per100g: Nutrients, grams: number, unit: 'g' | 'ml' = 'g'): Serving {
+  return { label: `${grams} ${unit}`, grams, ...scale(per100g, grams / 100) };
 }
 
 /** Make a diary entry from a food, a serving and a quantity (number of servings). */
@@ -305,4 +326,31 @@ export function draftToFood(d: FoodDraft, base?: Food): Food {
     per100g,
     servings,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Recipes (batch cook-ups)
+// ---------------------------------------------------------------------------
+
+export function recipeItemNutrients(i: RecipeItem): Nutrients {
+  return scale(i.serving, i.qty);
+}
+
+export function recipeTotals(r: Recipe): Nutrients {
+  return totals(r.items.map(recipeItemNutrients));
+}
+
+/** Per-portion serving, plus per-100 g when the cooked weight is known. */
+export function recipeServings(r: Recipe): { servings: Serving[]; per100g: Nutrients | null } {
+  const total = recipeTotals(r);
+  const portions = r.portions > 0 ? r.portions : 1;
+  const portionG = r.cookedWeightG ? Math.round(r.cookedWeightG / portions) : null;
+  const portion: Serving = { label: portionG ? `1 portion (${portionG} g)` : '1 portion', grams: portionG, ...scale(total, 1 / portions) };
+  const per100g = r.cookedWeightG ? scale(total, 100 / r.cookedWeightG) : null;
+  return { servings: per100g ? [portion, { label: '100 g', grams: 100, ...per100g }] : [portion], per100g };
+}
+
+export function recipeToFood(name: string, r: Recipe, base?: Food): Food {
+  const { servings, per100g } = recipeServings(r);
+  return { ...(base ?? {}), name: name.trim() || 'Recipe', source: 'recipe', recipe: r, servings, per100g };
 }

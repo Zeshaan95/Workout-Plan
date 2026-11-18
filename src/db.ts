@@ -1,6 +1,7 @@
 import Dexie, { type Table } from 'dexie';
 import { PLAN, type DailyTargets } from './plan';
 import type { ISODate } from './lib/dates';
+import type { DiaryEntry, Food, SavedMeal } from './lib/food';
 import type { HabitDay } from './lib/habits';
 import type { WeighIn } from './lib/weight';
 import type { WorkoutLog } from './lib/workouts';
@@ -57,6 +58,8 @@ export interface Settings {
   onboarded: boolean;
   auditStart?: ISODate | null;
   persistGranted?: boolean;
+  /** Look up foods online (Open Food Facts). Only search words and barcodes are sent. */
+  onlineFoodSearch?: boolean;
 }
 
 export class HubDB extends Dexie {
@@ -68,6 +71,9 @@ export class HubDB extends Dexie {
   habits!: Table<HabitDay, string>;
   foodAudit!: Table<FoodItem, number>;
   settings!: Table<Settings, string>;
+  foods!: Table<Food, number>;
+  diary!: Table<DiaryEntry, number>;
+  savedMeals!: Table<SavedMeal, number>;
 
   constructor(name = 'fat-loss-hub') {
     super(name);
@@ -81,10 +87,16 @@ export class HubDB extends Dexie {
       foodAudit: '++id, date',
       settings: 'id',
     });
+    // v2: food diary
+    this.version(2).stores({
+      foods: '++id, name, barcode',
+      diary: '++id, date, foodId',
+      savedMeals: '++id, name',
+    });
   }
 }
 
-export const TABLES = ['weighIns', 'bodyComps', 'weeks', 'workouts', 'checkIns', 'habits', 'foodAudit', 'settings'] as const;
+export const TABLES = ['weighIns', 'bodyComps', 'weeks', 'workouts', 'checkIns', 'habits', 'foodAudit', 'settings', 'foods', 'diary', 'savedMeals'] as const;
 export type TableName = (typeof TABLES)[number];
 
 export function defaultSettings(): Settings {
@@ -95,6 +107,7 @@ export function defaultSettings(): Settings {
     theme: 'system',
     onboarded: false,
     auditStart: null,
+    onlineFoodSearch: true,
   };
 }
 
@@ -114,3 +127,16 @@ export async function seedIfEmpty(db: HubDB): Promise<boolean> {
 }
 
 export const db = new HubDB();
+
+/** Diary totals feed the calorie and protein habits for that day. */
+export async function syncHabitsFromDiary(db: HubDB, date: ISODate): Promise<void> {
+  const entries = await db.diary.where('date').equals(date).toArray();
+  const h = await db.habits.get(date);
+  if (!entries.length) {
+    if (h?.fromDiary) await db.habits.put({ ...h, kcal: null, protein: null, fromDiary: false });
+    return;
+  }
+  const kcal = entries.reduce((a, e) => a + e.kcal, 0);
+  const protein = Math.round(entries.reduce((a, e) => a + e.protein, 0));
+  await db.habits.put({ ...(h ?? { date }), date, kcal, protein, fromDiary: true });
+}

@@ -38,6 +38,12 @@ A personal, mobile-first, offline PWA for a 12-week fat-loss plan. You use it on
   6. Bodyweight moves: +1 rep per set each new plan week. Backpack once split squats or pull-ups pass 12 reps; feet raised once push-ups pass 20. Max-minus-one = latest tested max − 1 (`workouts.ts`).
   7. Strength warning when a compound top set or pull-up total reps drops two sessions in a row (`workouts.ts`).
   8. Milestone projection: least squares over the last 14 days of daily readings, needing at least 4 readings (`weight.ts`).
+- **Food diary** (`src/lib/food.ts`, screens `Food`, `FoodAdd`, `FoodEdit`):
+  - Diary by day with breakfast, lunch, dinner and snacks, against the daily targets. Same calorie target every day; exercise does not add calories.
+  - Diary entries store a snapshot of the serving and nutrients, so editing or deleting a food never changes past days.
+  - Online search and barcode lookup use Open Food Facts (toggle in Settings). Any food used is saved to the `foods` table for offline use.
+  - Barcode scanning uses the native BarcodeDetector where available, otherwise ZXing (lazy-loaded; iPhone Safari needs this).
+  - Diary totals write the day's kcal and protein habits (`syncHabitsFromDiary`, `fromDiary` flag).
 - **Interpretations** (where the brief was open):
   - "Lifts going down" (rule 3): the latest session is lower than the previous one on any compound lift or on pull-ups.
   - Dips and push-ups: "tested max" is a manually recorded max on the exercise card.
@@ -50,7 +56,7 @@ A personal, mobile-first, offline PWA for a 12-week fat-loss plan. You use it on
 - **Logic:** pure, framework-free functions live in `src/lib/*.ts`, with `*.test.ts` alongside. Screens only compose them.
 - **Dates:** ISO `YYYY-MM-DD` strings with UTC arithmetic (`src/lib/dates.ts`). Display in UK format ("31 Oct 2026") via `formatUK*`.
 - **Units:** kg is primary, with st/lb alongside (`formatStLb`).
-- **Data:** `src/db.ts` holds the tables (weighIns, bodyComps, weeks, workouts, checkIns, habits, foodAudit, settings). When adding a table, bump the Dexie version and add it to `TABLES` so backup covers it.
+- **Data:** `src/db.ts` holds the tables (weighIns, bodyComps, weeks, workouts, checkIns, habits, foodAudit, settings, and from v2 foods, diary, savedMeals). When adding a table, bump the Dexie version and add it to `TABLES` so backup covers it.
 - **Routing:** hash-based (`src/router.ts`), so static hosting needs no rewrites. `?date=YYYY-MM-DD` on `#/today` previews any day.
 - **Language and UI:** British English. Mobile-first at 390 × 844, with 48 px+ tap targets. Use `inputMode="decimal"` / `"numeric"` via `NumInput`.
 - **Commands:** `npm test` (Vitest), `npm run build` (tsc + Vite + service worker), `npm run dev`.

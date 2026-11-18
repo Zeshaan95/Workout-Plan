@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Card, NumInput, Page, Row } from '../components/ui';
+import { Card, NumInput, Page, Row, Toggle } from '../components/ui';
 import { db, seedIfEmpty, type Settings as SettingsRow } from '../db';
 import { useSettings } from '../hooks';
 import { PLAN, type DailyTargets } from '../plan';
@@ -114,6 +114,16 @@ export default function Settings() {
           ))}
         </div>
         <p className="muted mt-2 text-xs">The weight targets, sessions and rules live in src/plan.ts.</p>
+      </Card>
+
+      <Card>
+        <h2 className="h2 mb-1">Food diary</h2>
+        <Toggle
+          checked={s.onlineFoodSearch !== false}
+          onChange={(v) => update({ onlineFoodSearch: v })}
+          label="Online food search and barcode lookup"
+          sub="Uses Open Food Facts (free, no account). Only your search words or barcode are sent; nothing about you. Foods you use are saved on this phone for offline use."
+        />
       </Card>
 
       <Card>

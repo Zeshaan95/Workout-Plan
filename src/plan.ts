@@ -354,6 +354,26 @@ export const PLAN = {
     oilGhee: { label: 'Oil or ghee (1 tbsp)', kcal: 120, protein: 0 },
   },
 
+  /** Food diary. Daily targets come from dailyTargets above (editable in Settings). */
+  diary: {
+    meals: [
+      { id: 'breakfast', label: 'Breakfast' },
+      { id: 'lunch', label: 'Lunch' },
+      { id: 'dinner', label: 'Dinner' },
+      { id: 'snacks', label: 'Snacks' },
+    ],
+    /** "About 40 g × 4 meals". */
+    proteinPerMeal: 40,
+    /** Open Food Facts (free, open, no account). UK site for UK products. */
+    onlineSource: {
+      name: 'Open Food Facts',
+      searchUrl: 'https://uk.openfoodfacts.org/cgi/search.pl',
+      productUrl: 'https://world.openfoodfacts.org/api/v2/product/',
+      fields: 'code,product_name,product_name_en,brands,nutriments,serving_size,serving_quantity',
+      pageSize: 25,
+    },
+  },
+
   defaultHeightCm: 174,
 
   seed: {

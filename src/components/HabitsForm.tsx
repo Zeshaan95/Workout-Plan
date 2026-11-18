@@ -48,6 +48,11 @@ export default function HabitsForm({ date, isRestDay, compact }: { date: ISODate
 
   return (
     <div className="divide-y divide-slate-100 dark:divide-slate-800">
+      {h?.fromDiary && (
+        <a href={`#/food?date=${date}`} className="block py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+          Calories and protein come from your food diary ›
+        </a>
+      )}
       {numRow('kcal', 'Calories', `${t.kcal.toLocaleString('en-GB')} kcal (never below ${t.kcalFloor.toLocaleString('en-GB')})`, h?.kcal != null ? res.kcal : false, false, 'kcal')}
       {numRow('protein', 'Protein', `${t.proteinMin}–${t.proteinMax} g`, res.protein, false, 'g')}
       {numRow('steps', 'Steps', `${t.steps.toLocaleString('en-GB')}`, res.steps, false, '')}

@@ -49,3 +49,34 @@ describe('backup', () => {
     expect(lifts.split('\n')[1]).toBe('2026-11-14,Strength A (gym),complete,Back squat,1,80,6,,,,,');
   });
 });
+
+describe('food diary backup and habit sync', () => {
+  it('round-trips foods, diary and saved meals, and still imports a v1 backup', async () => {
+    const { syncHabitsFromDiary } = await import('../db');
+    const db = new HubDB('food-roundtrip');
+    await seedIfEmpty(db);
+    const foodId = await db.foods.add({ name: 'Eggs', source: 'custom', servings: [{ label: '1 egg', kcal: 70, protein: 6, fat: 5, carbs: 0, fibre: 0 }] });
+    const serving = { label: '1 egg', kcal: 70, protein: 6, fat: 5, carbs: 0, fibre: 0 };
+    await db.diary.add({ date: '2026-11-18', meal: 'breakfast', foodId, name: 'Eggs', serving, qty: 3, kcal: 210, protein: 18, fat: 15, carbs: 0, fibre: 0 });
+    await db.savedMeals.add({ name: 'Eggs on toast', items: [{ foodId, name: 'Eggs', serving, qty: 2, kcal: 140, protein: 12, fat: 10, carbs: 0, fibre: 0 }] });
+    await syncHabitsFromDiary(db, '2026-11-18');
+    expect(await db.habits.get('2026-11-18')).toMatchObject({ kcal: 210, protein: 18, fromDiary: true });
+
+    const before = JSON.parse(JSON.stringify(await exportAll(db)));
+    await resetAll(db);
+    await importAll(db, before);
+    expect((await exportAll(db)).tables).toEqual(before.tables);
+
+    const v1 = { ...before, version: 1, tables: { ...before.tables } };
+    delete v1.tables.foods;
+    delete v1.tables.diary;
+    delete v1.tables.savedMeals;
+    await importAll(db, v1);
+    expect(await db.diary.count()).toBe(0);
+    expect(await db.weighIns.count()).toBe(6);
+
+    await db.diary.clear();
+    await syncHabitsFromDiary(db, '2026-11-18');
+    expect((await db.habits.get('2026-11-18'))?.kcal).toBeNull();
+  });
+});

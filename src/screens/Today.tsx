@@ -3,7 +3,8 @@ import { useMemo, useState } from 'react';
 import HabitsForm from '../components/HabitsForm';
 import { Badge, Card, NumInput, Page, Stat, StatusPill, Toggle } from '../components/ui';
 import { db } from '../db';
-import { setFootball, useDaily, useFootball, useToday, useWorkouts } from '../hooks';
+import { setFootball, useDaily, useFootball, useSettings, useToday, useWorkouts } from '../hooks';
+import { dayProgress } from '../lib/food';
 import { PLAN, SESSION_LABELS } from '../plan';
 import { diffDays, formatUK, formatUKLong, formatUKShort, nowTime, shortWeekday, weekdayIndex } from '../lib/dates';
 import { dayPlan, daysLeft, weekIsFestive, weekPlan } from '../lib/schedule';
@@ -194,6 +195,8 @@ export default function Today({ dateOverride }: { dateOverride?: string | null }
         </a>
       )}
 
+      <FoodCard date={today} />
+
       <Card>
         <div className="mb-1 flex items-center justify-between">
           <h2 className="h2">Today's habits</h2>
@@ -208,6 +211,28 @@ export default function Today({ dateOverride }: { dateOverride?: string | null }
         Goal: 2 stone down (84.3 kg) by Sunday {formatUKShort(PLAN.endDate)} 2027
       </p>
     </Page>
+  );
+}
+
+function FoodCard({ date }: { date: string }) {
+  const t = useSettings().targets;
+  const entries = useLiveQuery(() => db.diary.where('date').equals(date).toArray(), [date]) ?? [];
+  const p = dayProgress(entries, t);
+  return (
+    <a href={`#/food?date=${date}`} className="card block active:opacity-80">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="muted text-xs font-medium uppercase tracking-wide">Food</div>
+          <div className="text-2xl font-bold tabular-nums">
+            {p.kcalRemaining.toLocaleString('en-GB')} <span className="text-base font-medium">kcal left</span>
+          </div>
+          <div className="muted text-sm tabular-nums">
+            {p.eaten.kcal.toLocaleString('en-GB')} eaten · protein {Math.round(p.eaten.protein)} / {t.proteinMin}–{t.proteinMax} g
+          </div>
+        </div>
+        <span className="btn-primary min-h-[44px] px-4 text-sm">+ Log food</span>
+      </div>
+    </a>
   );
 }
 

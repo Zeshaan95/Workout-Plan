@@ -4,7 +4,10 @@ import { useSettings } from './hooks';
 import { go, useRoute } from './router';
 import CatchUp from './screens/CatchUp';
 import CheckIn from './screens/CheckIn';
+import FoodDiary from './screens/Food';
+import FoodAdd from './screens/FoodAdd';
 import FoodAudit from './screens/FoodAudit';
+import FoodEdit from './screens/FoodEdit';
 import Habits from './screens/Habits';
 import Logger from './screens/Logger';
 import More from './screens/More';
@@ -16,8 +19,9 @@ import WeighIns from './screens/WeighIns';
 
 const TABS = [
   { path: '/today', label: 'Today', icon: '◉' },
-  { path: '/weigh', label: 'Weight', icon: '⚖' },
+  { path: '/food', label: 'Food', icon: '◒' },
   { path: '/log', label: 'Workout', icon: '◆' },
+  { path: '/weigh', label: 'Weight', icon: '⚖' },
   { path: '/progress', label: 'Progress', icon: '↗' },
   { path: '/more', label: 'More', icon: '≡' },
 ];
@@ -67,6 +71,15 @@ export default function App() {
     case '/weigh':
       screen = <WeighIns />;
       break;
+    case '/food':
+      screen = <FoodDiary date={dateOverride} />;
+      break;
+    case '/food/add':
+      screen = <FoodAdd date={dateOverride} meal={route.params.get('meal')} />;
+      break;
+    case '/food/new':
+      screen = <FoodEdit id={route.params.get('id')} date={dateOverride} meal={route.params.get('meal')} barcode={route.params.get('barcode')} />;
+      break;
     case '/log':
       screen = <Logger date={dateOverride} session={route.params.get('session')} />;
       break;
@@ -98,7 +111,7 @@ export default function App() {
       screen = <Today dateOverride={dateOverride} />;
   }
 
-  const active = MORE_PATHS.includes(route.path) ? '/more' : TABS.some((t) => t.path === route.path) ? route.path : '/today';
+  const active = route.path.startsWith('/food') ? '/food' : MORE_PATHS.includes(route.path) ? '/more' : TABS.some((t) => t.path === route.path) ? route.path : '/today';
 
   return (
     <>

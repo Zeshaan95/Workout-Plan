@@ -1,7 +1,7 @@
 import { TABLES, type HubDB } from '../db';
 
 export const BACKUP_APP = 'fat-loss-hub';
-export const BACKUP_VERSION = 1;
+export const BACKUP_VERSION = 2;
 
 export interface Backup {
   app: typeof BACKUP_APP;

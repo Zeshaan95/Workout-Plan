@@ -11,6 +11,8 @@ export interface HabitDay {
   sleepH?: number | null;
   sessionDone?: boolean;
   creatine?: boolean;
+  /** kcal and protein were filled in from the food diary. */
+  fromDiary?: boolean;
 }
 
 export type HabitKey = 'kcal' | 'protein' | 'steps' | 'water' | 'sleep' | 'creatine' | 'session';

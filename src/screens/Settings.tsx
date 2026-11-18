@@ -126,6 +126,8 @@ export default function Settings() {
         />
       </Card>
 
+      <ApiKeyCard value={s.anthropicApiKey ?? ''} onSave={(k) => update({ anthropicApiKey: k })} />
+
       <Card>
         <h2 className="h2">Backup & move devices</h2>
         <p className="muted mb-3 text-sm">
@@ -150,5 +152,52 @@ export default function Settings() {
 
       <p className="muted text-center text-xs">No accounts, no servers, no analytics. Works offline.</p>
     </Page>
+  );
+}
+
+function ApiKeyCard({ value, onSave }: { value: string; onSave: (k: string) => void }) {
+  const [draft, setDraft] = useState(value);
+  const [show, setShow] = useState(false);
+  const [saved, setSaved] = useState(false);
+  return (
+    <Card>
+      <h2 className="h2 mb-1">Photo logging</h2>
+      <p className="muted mb-3 text-sm">
+        Take a photo of your food and Claude estimates it for the diary. Uses your own Anthropic API key (from platform.claude.com; roughly 1–2p per photo). The key stays on this phone and is never included in backups. Photos go to Anthropic for analysis only.
+      </p>
+      <div className="flex gap-2">
+        <input
+          className="input flex-1 font-mono text-sm"
+          type={show ? 'text' : 'password'}
+          autoComplete="off"
+          spellCheck={false}
+          placeholder="sk-ant-..."
+          value={draft}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            setSaved(false);
+          }}
+          aria-label="Anthropic API key"
+        />
+        <button className="btn-secondary px-3 text-sm" onClick={() => setShow(!show)}>{show ? 'Hide' : 'Show'}</button>
+      </div>
+      <div className="mt-2 flex gap-2">
+        <button
+          className="btn-primary flex-1"
+          disabled={draft.trim() === value}
+          onClick={() => {
+            onSave(draft.trim());
+            setSaved(true);
+          }}
+        >
+          {saved ? 'Saved ✓' : 'Save key'}
+        </button>
+        {value && (
+          <button className="btn-secondary text-rose-600" onClick={() => { onSave(''); setDraft(''); }}>
+            Remove
+          </button>
+        )}
+      </div>
+    </Card>
   );
 }

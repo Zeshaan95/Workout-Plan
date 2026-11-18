@@ -67,3 +67,10 @@ To move to a new device:
 
 - **UK foods (offline):** McCance and Widdowson's Composition of Foods Integrated Dataset 2021 (Public Health England). Contains public sector information licensed under the [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/). To regenerate it, run `python3 scripts/build-cofid.py <xlsx>`.
 - **Branded and packaged foods (online):** [Open Food Facts](https://world.openfoodfacts.org), under the Open Database Licence. This can be turned off in Settings.
+
+## Photo logging
+
+To log food from a photo, add your own Anthropic API key in **Settings → Photo logging**. You can get one at platform.claude.com, which is paid per use: roughly 1–2p per photo.
+
+- The key stays on the phone and is never included in backups.
+- Photos go straight from the phone to Anthropic for analysis, and the app doesn't save them.

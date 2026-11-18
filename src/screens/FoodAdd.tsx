@@ -27,6 +27,7 @@ import {
 import { COFID_ATTRIBUTION, cofidToFood, loadCofid, searchCofid, type CofidRow } from '../lib/cofid';
 
 const BarcodeScanner = lazy(() => import('../components/BarcodeScanner'));
+const PhotoLog = lazy(() => import('../components/PhotoLog'));
 
 type Tab = 'recent' | 'frequent' | 'mine' | 'meals';
 
@@ -75,6 +76,7 @@ export default function FoodAdd({ date: dateParam, meal: mealParam, recipe: reci
   const [picked, setPicked] = useState<{ food: Food; serving?: Serving; qty?: number } | null>(null);
   const [quick, setQuick] = useState(false);
   const [scan, setScan] = useState(false);
+  const [photo, setPhoto] = useState(false);
   const [scanMsg, setScanMsg] = useState('');
   const [added, setAdded] = useState<string | null>(null);
   const [cofid, setCofid] = useState<CofidRow[]>([]);
@@ -188,6 +190,11 @@ export default function FoodAdd({ date: dateParam, meal: mealParam, recipe: reci
     >
       <input className="input" type="search" placeholder={online ? 'Search foods, UK foods and Open Food Facts' : 'Search your foods and UK foods'} value={q} onChange={(e) => setQ(e.target.value)} enterKeyHint="search" />
 
+      {recipeId == null && (
+        <button className="btn-primary w-full" onClick={() => setPhoto(true)}>
+          📷 Log from a photo
+        </button>
+      )}
       <div className="grid grid-cols-2 gap-2">
         <button className="btn-secondary px-2 text-sm" onClick={() => setScan(true)}>▦ Scan barcode</button>
         <button className="btn-secondary px-2 text-sm" onClick={() => setQuick(true)}>Quick add</button>
@@ -320,6 +327,21 @@ export default function FoodAdd({ date: dateParam, meal: mealParam, recipe: reci
         />
       )}
       {quick && <QuickAdd onClose={() => setQuick(false)} onAdd={(label, n) => (setQuick(false), addEntry(quickAddFood(label, n), { label: 'entry', ...n }, 1, meal))} />}
+      {photo && (
+        <Suspense fallback={null}>
+          <PhotoLog
+            apiKey={settings.anthropicApiKey ?? ''}
+            date={date}
+            meal={meal}
+            onClose={() => setPhoto(false)}
+            onAdded={(n) => {
+              setPhoto(false);
+              setAdded(`Added ${n} item${n > 1 ? 's' : ''}`);
+              setTimeout(() => setAdded(null), 1800);
+            }}
+          />
+        </Suspense>
+      )}
       {scan && (
         <Sheet onClose={() => setScan(false)}>
           <Suspense fallback={<p className="muted">Starting camera…</p>}>

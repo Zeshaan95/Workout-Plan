@@ -60,6 +60,8 @@ export interface Settings {
   persistGranted?: boolean;
   /** Look up foods online (Open Food Facts). Only search words and barcodes are sent. */
   onlineFoodSearch?: boolean;
+  /** The user's own Anthropic API key for photo logging. Stays on this device; never exported. */
+  anthropicApiKey?: string;
 }
 
 export class HubDB extends Dexie {

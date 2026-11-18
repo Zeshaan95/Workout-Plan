@@ -80,3 +80,15 @@ describe('food diary backup and habit sync', () => {
     expect((await db.habits.get('2026-11-18'))?.kcal).toBeNull();
   });
 });
+
+describe('API key and backups', () => {
+  it('never exports the API key and keeps it on import', async () => {
+    const db = new HubDB('key-test');
+    await seedIfEmpty(db);
+    await db.settings.update('app', { anthropicApiKey: 'sk-ant-secret' });
+    const backup = await exportAll(db);
+    expect(JSON.stringify(backup)).not.toContain('sk-ant-secret');
+    await importAll(db, JSON.parse(JSON.stringify(backup)));
+    expect((await db.settings.get('app'))?.anthropicApiKey).toBe('sk-ant-secret');
+  });
+});

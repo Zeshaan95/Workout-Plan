@@ -15,6 +15,8 @@ export async function exportAll(db: HubDB): Promise<Backup> {
   await db.transaction('r', TABLES.map((t) => db.table(t)), async () => {
     for (const t of TABLES) tables[t] = await db.table(t).toArray();
   });
+  // Never put the API key in a backup file.
+  tables.settings = (tables.settings as Record<string, unknown>[]).map(({ anthropicApiKey: _key, ...rest }) => (void _key, rest));
   return { app: BACKUP_APP, version: BACKUP_VERSION, exportedAt: new Date().toISOString(), tables };
 }
 
@@ -30,11 +32,14 @@ export function validateBackup(data: unknown): asserts data is Backup {
 export async function importAll(db: HubDB, data: unknown): Promise<void> {
   validateBackup(data);
   await db.transaction('rw', TABLES.map((t) => db.table(t)), async () => {
+    // Keep this device's API key: backups never contain one.
+    const key = ((await db.table('settings').get('app')) as { anthropicApiKey?: string } | undefined)?.anthropicApiKey;
     for (const t of TABLES) {
       await db.table(t).clear();
       const rows = data.tables[t];
       if (Array.isArray(rows) && rows.length) await db.table(t).bulkPut(rows);
     }
+    if (key) await db.table('settings').update('app', { anthropicApiKey: key });
   });
 }
 

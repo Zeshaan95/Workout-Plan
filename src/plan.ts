@@ -372,6 +372,15 @@ export const PLAN = {
       fields: 'code,product_name,product_name_en,brands,nutriments,serving_size,serving_quantity',
       pageSize: 25,
     },
+    /** Photo analysis with Claude (your own Anthropic API key, stored only on the phone). */
+    photo: {
+      model: 'claude-opus-5-5',
+      effort: 'medium' as const,
+      maxTokens: 16000,
+      /** Long edge in pixels; larger photos are scaled down before sending. */
+      maxImagePx: 1568,
+      jpegQuality: 0.85,
+    },
   },
 
   defaultHeightCm: 174,
